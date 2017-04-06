@@ -46,12 +46,73 @@ func init() {
 	// Handle one-time initialization, including secrets setup.
 	m.Get("/config", Configure)
 	m.Post("/config", Configure)
+
+	m.Post("/webhook", HandleWebhook)
+
 	m.Put("/r", AddReward)
 	m.Get("/r/:id", ShowReward)
 	m.Post("/r/:id", DispenseReward)
 	m.Post("/donate", DonateRewards)
 	m.Get(home, ShowHome)
 	http.Handle("/", m)
+}
+
+func grantReward(c context.Context, r *http.Request, email, typ, desc string) (code int, err error) {
+	email = strings.Replace(email, "(", "<", -1)
+	email = strings.Replace(email, ")", ">", -1)
+
+	addr, _ := netmail.ParseAddress(email)
+
+	reward := Reward{
+		Ip: r.RemoteAddr,
+
+		Email:        email,
+		EmailAddress: addr.Address,
+		Type:         typ,
+		Description:  desc,
+
+		Granted: time.Now(),
+		// Dispensed is left empty
+	}
+
+	uid := reward.Uid()
+	key := uid.Key(c)
+
+	if err := datastore.Get(c, key, &reward); err == nil {
+		log.Errorf(c, "Duplicate reward attempt %v: %#v", key, reward)
+		return http.StatusConflict, fmt.Errorf("Reward already issued")
+	}
+
+	if _, err := datastore.Put(c, key, &reward); err != nil {
+		log.Errorf(c, "Failed to save reward %v: %v\nReward:%#v", key, err, reward)
+		return http.StatusInternalServerError, fmt.Errorf("Failed to save reward")
+	}
+
+	retrievalUrl := fmt.Sprintf("http://%s/r/%s", r.Host, uid)
+
+	log.Debugf(c, "Host: [%s] Retrieval url: [%s]", r.RequestURI, retrievalUrl)
+
+	data := map[string]string{
+		"credit_url": retrievalUrl,
+		"reason":     reward.Reason(),
+		"home_url":   fmt.Sprintf("http://%s/me", r.Host),
+	}
+
+	msg := &mail.Message{
+		Sender:   fmt.Sprintf("Chompy <notify@%s.appspotmail.com>", appengine.AppID(c)),
+		To:       []string{email},
+		Subject:  "You've got candy!",
+		Body:     renderTemplateOrDie(emailTextTpl, data),
+		HTMLBody: renderTemplateOrDie(emailHtmlTpl, data),
+	}
+	if err := mail.Send(c, msg); err != nil {
+		log.Errorf(c, "Couldn't send email for reward %v: %v\n%v", key, err, reward)
+		return http.StatusInternalServerError, fmt.Errorf("Failed to send notification email")
+	}
+
+	log.Infof(c, "Granted reward %v and sent notification email: %#v", key, reward)
+
+	return 200, nil
 }
 
 func AddReward(w http.ResponseWriter, r *http.Request, c context.Context) {
@@ -76,62 +137,10 @@ func AddReward(w http.ResponseWriter, r *http.Request, c context.Context) {
 		return
 	}
 
-	email = strings.Replace(email, "(", "<", -1)
-	email = strings.Replace(email, ")", ">", -1)
-
-	addr, _ := netmail.ParseAddress(email)
-
-	reward := Reward{
-		Ip: r.RemoteAddr,
-
-		Email:        email,
-		EmailAddress: addr.Address,
-		Type:         typ,
-		Description:  desc,
-
-		Granted: time.Now(),
-		// Dispensed is left empty
-	}
-
-	uid := reward.Uid()
-	key := uid.Key(c)
-
-	if err := datastore.Get(c, key, &reward); err == nil {
-		log.Errorf(c, "Duplicate reward attempt %v: %#v", key, reward)
-		http.Error(w, "Reward already issued", http.StatusConflict)
+	if code, err := grantReward(c, r, email, typ, desc); err != nil {
+		http.Error(w, err.Error(), code)
 		return
 	}
-
-	if _, err := datastore.Put(c, key, &reward); err != nil {
-		log.Errorf(c, "Failed to save reward %v: %v\nReward:%#v", key, err, reward)
-		http.Error(w, "Failed to save reward", http.StatusInternalServerError)
-		return
-	}
-
-	retrievalUrl := fmt.Sprintf("http://%s/r/%s", r.Host, uid)
-
-	log.Debugf(c, "Host: [%s] Retrieval url: [%s]", r.RequestURI, retrievalUrl)
-
-	data := map[string]string{
-		"credit_url": retrievalUrl,
-		"reason":     reward.Reason(),
-		"home_url":   fmt.Sprintf("http://%s/me", r.Host),
-	}
-
-	msg := &mail.Message{
-		Sender:   fmt.Sprintf("Chompy <notify@%s.appspotmail.com>", appengine.AppID(c)),
-		To:       []string{email},
-		Subject:  "You've got candy!",
-		Body:     renderTemplateOrDie(emailTextTpl, data),
-		HTMLBody: renderTemplateOrDie(emailHtmlTpl, data),
-	}
-	if err := mail.Send(c, msg); err != nil {
-		log.Errorf(c, "Couldn't send email for reward %v: %v\n%v", key, err, reward)
-		http.Error(w, "Failed to send notification email", http.StatusInternalServerError)
-		return
-	}
-
-	log.Infof(c, "Granted reward %v and sent notification email: %#v", key, reward)
 }
 
 func renderTemplateOrDie(t *template.Template, data interface{}) string {

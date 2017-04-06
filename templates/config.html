@@ -7,10 +7,39 @@
     <br>Reasonable times are 0.45s for peanut m&amp;ms and 0.25s for plain m&amp;ms.
     </div>
     <p>
+    Github login -> email config:
+    <input type="button" onclick="addUser()" value="Add user->email mapping">
+    <ul id='users'>
+        {{range .Config.GithubUsers}}
+        <input type="text" name="username" value="{{.Username}}" size=30 placeholder="username">
+        <input type="text" name="useremail" value="{{.Email}}" size=50 placeholder="email">
+        <br/>
+        {{end}}
+    </ul>
+    <p>
     Snackbot Agent URL: <input type="text" name="agent-url" value="{{.Config.AgentURL}}" size=100/><br/>
     Reward Grant Secret Token: <input type="text" name="secret-token" value="{{.Config.SecretAuthToken}}" size=30/><br/>
     <input type="submit" name="Update Configuration">
 </form>
+<script type="text/javascript">
+    function newInput(name, sz) {
+        var input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = name;
+        input.name = name;
+        input.size = sz;
+        return input;
+    }
+    function addUser(ev) {
+        el = document.getElementById('users');
+        el.appendChild(newInput("username", 30));
+        el.appendChild(newInput("useremail", 50));
+        el.appendChild(document.createElement("br"));
+        ev.preventDefault();
+        return false;
+    }
+</script>
+
 
 {{ if .Message }}
 <p>
