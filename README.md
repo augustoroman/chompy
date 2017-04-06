@@ -1,4 +1,7 @@
-# Chompy ![Chompy](http://38.media.tumblr.com/aa7029e25e94e31ca778b259729f6e79/tumblr_n9yvdfDSdG1sgl0ajo1_500.gif "Chompy!")
+# Chompy
+
+![Chompy](http://38.media.tumblr.com/aa7029e25e94e31ca778b259729f6e79/tumblr_n9yvdfDSdG1sgl0ajo1_500.gif "Chompy!")
+
 Software for a snack-dispensing motivator!
 
 ---
@@ -15,6 +18,7 @@ they check in code!
 To use this, you must [first create a Snackbot](http://www.jameco.com/Jameco/workshop/JamecoBuilds/jamecobuilds-snackbot.html).
 
 Once that is up and running:
+
     * Replace the agent and device code with the code in [/electricimp](/electricimp)
     * Create an app-engine app from this code.
         * You might want to customize the reward wording in [reward.go](/reward.go)
