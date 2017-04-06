@@ -1,0 +1,21 @@
+<h1>Configure Chompy</h1>
+<hr>
+<form method="POST" action="" style="margin-left: 2ex">
+    Dispense Time: <input type="text" name="dispense-time" value="{{.Config.DispenseTime}}" size=30/><br/>
+    <div style="margin-left: 3ex; font-size: small;">
+    Note: Times can be specified with units such as "300ms", "0.35s" or "1m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+    <br>Reasonable times are 0.45s for peanut m&amp;ms and 0.25s for plain m&amp;ms.
+    </div>
+    <p>
+    Snackbot Agent URL: <input type="text" name="agent-url" value="{{.Config.AgentURL}}" size=100/><br/>
+    Reward Grant Secret Token: <input type="text" name="secret-token" value="{{.Config.SecretAuthToken}}" size=30/><br/>
+    <input type="submit" name="Update Configuration">
+</form>
+
+{{ if .Message }}
+<p>
+<hr>
+<blockquote>
+    <b>{{.Message}}</b>
+</blockquote>
+{{ end }}

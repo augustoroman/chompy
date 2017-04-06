@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chompy Home</title>
+    <style type="text/css">
+    .available { }
+    .used { opacity: 0.5; font-style: italic; }
+    .error {
+        display: inline-block;
+        float: right;
+        color: #A00;
+        background-color: #FCC;
+        border: 1px solid #F00;
+        margin: 1ex;
+        padding: 1ex;
+        clear: both;
+    }
+    #success_msg {
+        display: inline-block;
+        margin: 1ex;
+        padding: 1ex;
+        border: 1px solid #0F0;
+        background-color: #CFC;
+        float: right;
+    }
+    .donation { color: #040; }
+    .original { color: #888; display: none; }
+    #donate {
+        display: inline-block;
+        margin: 1ex;
+        padding: 1ex;
+        border: 1px solid #0A0;
+        background: #EFE;
+    }
+    </style>
+</head>
+<body>
+Welcome {{.User}}!  <a href="{{.LogoutUrl}}">Sign out</a>
+
+{{ if .Status.Online}}{{ else }}
+<p class=error>Chompy seems to be offline</p>
+{{ end }}
+<p class=error id=error style='display: none;'>...</p>
+<p id=success_msg style='display: none;'>...</p>
+
+<p>
+{{ .TotalCount }} total credits, {{ .AvailableCount }} unused.
+<form id="donate" action="#">
+    Donate <input name="num" type="number" min="1" max="{{.AvailableCount}}" value="1"></input> credits to
+    <input name="email" type="email" placeholder="someone@myplace.com" required></input>
+    <input type="submit" value="Donate"></input>
+    <br>
+    <textarea name="msg" cols=40 rows=1 placeholder='optional message, e.g. "Thank you!"'></textarea>
+    <br><i>(The oldest unused credits will be donated and will no longer be listed for you.)</i>
+</form>
+
+<ul>
+{{range .Rewards}}
+<li class="{{.Status}}" id='{{.Uid}}'>
+    {{if .Available}}<span id='{{.Uid}}-action'
+    >[<a href="#" onclick="return dispense('{{.Uid}}')">dispense</a>] </span
+    >{{end}}
+
+    {{ if .PreviousOwners }}
+        <span class='donation'>Donated on {{.LastDonationTime.Format "Jan 02"}} by
+            {{ .LastDonor }}{{ if .LastDonorMessage }}: {{ .LastDonorMessage }}{{ end }}
+        </span>
+        <span class='original'>{{.Type}}: {{.Description}}</span>
+    {{ else }}
+        <span>{{.Granted.Format "2006-01-02"}} {{.Type}}: {{.Description}}</span>
+    {{ end }}
+</li>
+{{end}}
+</ul>
+
+<script src="/js/jquery.min.js"></script>
+<script type="text/javascript">
+function dispense(id) {
+    $.ajax({
+        url: '/r/' + id + location.search,
+        method: 'POST',
+        success: function() {
+            $('#'+id).removeClass('available').addClass('used');
+            $('#'+id+'-action').html('');
+            $('#success_msg').text('Enjoy!');
+            $('#success_msg').show();
+        },
+        error: function(xhr, status, error) {
+            $('#error').text('Failed: ' + xhr.responseText);
+            $('#error').show();
+        },
+    });
+    $('#success_msg').hide();
+    $('#error').hide();
+    return false;
+}
+$('#donate').submit(function(e) {
+    e.preventDefault();
+    $.ajax({
+        url: '/donate' + location.search,
+        method: 'POST',
+        data: $(this).serialize(),
+        success: function(data) {
+            $('#success_msg').text('Donated ' + data.donated + ' credits to ' + data.to);
+            $('#success_msg').show();
+            $("input[name=email]").val("");
+            $('input[type=submit]').attr('disabled',null);
+            var links = $('a[href=#]');
+            var N = links.length;
+            var donated = links.slice(N-data.donated);
+            donated.replaceWith("donated");
+        },
+        error: function(xhr, status, error) {
+            $('#error').text('Failed: ' + xhr.responseText);
+            $('#error').show();
+            $('input[type=submit]').attr('disabled',null);
+        },
+    });
+    $('input[type=submit]').attr('disabled','disabled');
+    $('#success_msg').hide();
+    $('#error').hide();
+});
+</script>
+</body>
+</html>

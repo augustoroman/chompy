@@ -1,0 +1,5 @@
+Congratulations, {{.from}} sent you {{.N}} chompy credits!
+
+{{if .message}}They said: {{.message}}
+
+{{end}}See your chompy credits: {{.home_url}}

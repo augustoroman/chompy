@@ -1,0 +1,6 @@
+Congratulations, you have a chompy credit!
+  {{.credit_url}}
+
+  {{.reason}}
+
+See your chompy credits: {{.home_url}}
