@@ -45,7 +45,7 @@ func handleGithubWebhook(w http.ResponseWriter, r *http.Request, c context.Conte
 		return
 	}
 
-	log.Infof(c, "Webhook Event: %s", event)
+	log.Debugf(c, "Webhook Event: %s", event)
 	log.Debugf(c, "Webhook body: %s", string(body))
 
 	if event != "issues" {
@@ -69,7 +69,7 @@ func handleGithubWebhook(w http.ResponseWriter, r *http.Request, c context.Conte
 		http.Error(w, "Can't parse JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	log.Infof(c, "Parsed JSON: %#v", eventData)
+	log.Debugf(c, "Parsed JSON: %#v", eventData)
 
 	if eventData.Action != "closed" {
 		w.WriteHeader(http.StatusNoContent)

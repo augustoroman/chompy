@@ -75,6 +75,8 @@ func grantReward(c context.Context, r *http.Request, email, typ, desc string) (c
 		// Dispensed is left empty
 	}
 
+	log.Infof(c, "Granting reward to %s for %s: %s", email, typ, desc)
+
 	uid := reward.Uid()
 	key := uid.Key(c)
 
