@@ -337,7 +337,7 @@ func ShowHome(w http.ResponseWriter, r *http.Request, c context.Context) {
 		Order("-Granted").
 		GetAll(c, &rewards)
 	if err != nil {
-		log.Criticalf(c, "Failed to load rewards for %v", u)
+		log.Criticalf(c, "Failed to load rewards for %v: %v", u, err)
 	}
 
 	numAvailable := 0
