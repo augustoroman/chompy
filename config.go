@@ -2,6 +2,7 @@ package chompy
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/urlfetch"
 	"google.golang.org/appengine/user"
 )
 
@@ -48,6 +50,44 @@ func getConfig(c context.Context) (Configuration, error) {
 	var cfg Configuration
 	err := datastore.Get(c, cfg.Key(c), &cfg)
 	return cfg, err
+}
+
+func Dispense(w http.ResponseWriter, r *http.Request, c context.Context) {
+	u := user.Current(c)
+	if !u.Admin {
+		http.NotFound(w, r)
+		return
+	}
+	cfg, err := getConfig(c)
+	if err != nil {
+		log.Criticalf(c, "Cannot load configuration: %v", err)
+		http.Error(w, "Cannot load configuration", http.StatusInternalServerError)
+		return
+	}
+
+	dt, err := time.ParseDuration(r.FormValue("time"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cfg.DispenseTime = dt
+	client := urlfetch.Client(c)
+	resp, err := client.Post(cfg.DispenseUrl(), "", nil)
+	if err != nil {
+		log.Criticalf(c, "Could not contact snackbot: %v", err)
+		http.Error(w, "Cannot contact snackbot, please try again later.", http.StatusServiceUnavailable)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		respContent, _ := ioutil.ReadAll(resp.Body)
+		log.Criticalf(c, "Could not contact snackbot: %s", respContent)
+		http.Error(w, "Cannot contact snackbot, please try again later.", http.StatusServiceUnavailable)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "OK")
 }
 
 func Configure(w http.ResponseWriter, r *http.Request, c context.Context) {

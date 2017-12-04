@@ -46,6 +46,7 @@ func init() {
 	// Handle one-time initialization, including secrets setup.
 	m.Get("/config", Configure)
 	m.Post("/config", Configure)
+	m.Post("/dispense", Dispense)
 
 	m.Post("/webhook", HandleWebhook)
 
