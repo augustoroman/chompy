@@ -37,14 +37,6 @@ func (c *Configuration) DispenseUrl() string {
 func (cfg Configuration) Key(c context.Context) *datastore.Key {
 	return datastore.NewKey(c, "Configuration", "config", 0, nil)
 }
-func (c *Configuration) LookGithubUser(username string) *GithubUserInfo {
-	for _, user := range c.GithubUsers {
-		if strings.EqualFold(user.Username, username) {
-			return &user
-		}
-	}
-	return nil
-}
 
 func getConfig(c context.Context) (Configuration, error) {
 	var cfg Configuration

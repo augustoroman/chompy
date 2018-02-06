@@ -50,6 +50,10 @@ func (r Reward) Reason() string {
 	switch r.Type {
 	case "issue-closed":
 		return fmt.Sprintf("You closed an issue: %s", r.Description)
+	case "pull-request-merged":
+		return fmt.Sprintf("You merged a pull request: %s", r.Description)
+	case "pull-request-reviewed":
+		return fmt.Sprintf("You reviewed a pull request: %s", r.Description)
 	case "commit-merged":
 		return fmt.Sprintf("You committed some code (%s)", r.Description)
 	case "thanks":
