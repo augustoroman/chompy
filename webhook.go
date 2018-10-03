@@ -26,8 +26,53 @@ func HandleWebhook(w http.ResponseWriter, r *http.Request, c context.Context) {
 	if strings.HasPrefix(r.Header.Get("User-Agent"), "GitHub-Hookshot/") {
 		handleGithubWebhook(w, r, c, cfg)
 	} else {
-		http.Error(w, "Unknown webhook type", http.StatusBadRequest)
+		handleGenericWebhook(w, r, c, cfg)
 	}
+}
+
+func handleGenericWebhook(w http.ResponseWriter, r *http.Request, c context.Context, cfg Configuration) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Criticalf(c, "Failed to read request body: %v", err)
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	log.Infof(c, "Got request body: %s", body)
+
+	var payload struct {
+		Auth        string
+		Description string
+		Email       string
+		Type        string
+	}
+
+	if err := json.Unmarshal(body, &payload); err != nil {
+		log.Errorf(c, "Failed to decode json payload: %v", err)
+		http.Error(w, "Bad payload", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Auth != cfg.SecretAuthToken {
+		log.Errorf(c, "Bad auth code: %q", payload.Auth)
+		http.Error(w, "Bad auth code", http.StatusUnauthorized)
+		return
+	}
+
+	if payload.Email == "" || payload.Description == "" || payload.Type == "" {
+		log.Errorf(c, "Missing required fields: %#v", payload)
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+
+	log.Infof(c, "Valid request, granting credit to %q for %q", payload.Email, payload.Description)
+	code, err := grantReward(c, r, payload.Email, payload.Type, payload.Description)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func handleGithubWebhook(w http.ResponseWriter, r *http.Request, c context.Context, cfg Configuration) {
